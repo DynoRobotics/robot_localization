@@ -2678,7 +2678,7 @@ bool RosFilter<T>::prepareAcceleration(
   // we have to handle the situation.
   tf2::Transform target_frame_trans;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
-    tf_buffer_.get(), target_frame, msg_frame, msg->header.stamp, tf_timeout_,
+    this, tf_buffer_.get(), target_frame, msg_frame, msg->header.stamp, tf_timeout_,
     target_frame_trans);
 
   if (can_transform) {
@@ -2908,7 +2908,7 @@ bool RosFilter<T>::preparePose(
   // 2. Get the target frame transformation
   tf2::Transform target_frame_trans;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
-    tf_buffer_.get(), final_target_frame, pose_tmp.frame_id_,
+    this, tf_buffer_.get(), final_target_frame, pose_tmp.frame_id_,
     rclcpp::Time(tf2::timeToSec(pose_tmp.stamp_)), tf_timeout_,
     target_frame_trans);
 
@@ -2918,7 +2918,7 @@ bool RosFilter<T>::preparePose(
   bool can_src_transform = false;
   if (source_frame != base_link_frame_id_) {
     can_src_transform = ros_filter_utilities::lookupTransformSafe(
-      tf_buffer_.get(), source_frame, base_link_frame_id_,
+      this, tf_buffer_.get(), source_frame, base_link_frame_id_,
       rclcpp::Time(tf2::timeToSec(pose_tmp.stamp_)), tf_timeout_,
       source_frame_trans);
   }
@@ -3341,7 +3341,7 @@ bool RosFilter<T>::prepareTwist(
   // 4. We need to transform this into the target frame (probably base_link)
   tf2::Transform target_frame_trans;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
-    tf_buffer_.get(), target_frame, msg_frame, msg->header.stamp, tf_timeout_,
+    this, tf_buffer_.get(), target_frame, msg_frame, msg->header.stamp, tf_timeout_,
     target_frame_trans);
 
   if (can_transform) {

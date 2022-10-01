@@ -518,7 +518,7 @@ void NavSatTransform::getRobotOriginCartesianPose(
   // Get linear offset from origin for the GPS
   tf2::Transform offset;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
-    tf_buffer_.get(), base_link_frame_id_, gps_frame_id_, transform_time,
+    this, tf_buffer_.get(), base_link_frame_id_, gps_frame_id_, transform_time,
     transform_timeout_, offset);
 
   if (can_transform) {
@@ -565,13 +565,13 @@ void NavSatTransform::getRobotOriginWorldPose(
   // Remove the offset from base_link
   tf2::Transform gps_offset_rotated;
   bool can_transform = ros_filter_utilities::lookupTransformSafe(
-    tf_buffer_.get(), base_link_frame_id_, gps_frame_id_, transform_time,
+    this, tf_buffer_.get(), base_link_frame_id_, gps_frame_id_, transform_time,
     transform_timeout_, gps_offset_rotated);
 
   if (can_transform) {
     tf2::Transform robot_orientation;
     can_transform = ros_filter_utilities::lookupTransformSafe(
-      tf_buffer_.get(), world_frame_id_, base_link_frame_id_, transform_time,
+      this, tf_buffer_.get(), world_frame_id_, base_link_frame_id_, transform_time,
       transform_timeout_, robot_orientation);
 
     if (can_transform) {
@@ -662,7 +662,7 @@ void NavSatTransform::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
     // Correct for the IMU's orientation w.r.t. base_link
     tf2::Transform target_frame_trans;
     bool can_transform = ros_filter_utilities::lookupTransformSafe(
-      tf_buffer_.get(), base_link_frame_id_, msg->header.frame_id,
+      this, tf_buffer_.get(), base_link_frame_id_, msg->header.frame_id,
       msg->header.stamp, transform_timeout_, target_frame_trans);
 
     if (can_transform) {

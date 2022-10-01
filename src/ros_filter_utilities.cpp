@@ -129,6 +129,7 @@ double getYaw(const tf2::Quaternion quat)
 }
 
 bool lookupTransformSafe(
+  rclcpp::Node * node,
   const tf2_ros::Buffer * buffer,
   const std::string & target_frame,
   const std::string & source_frame,
@@ -137,20 +138,35 @@ bool lookupTransformSafe(
   tf2::Transform & target_frame_trans,
   const bool silent)
 {
-  bool retVal = true;
+  // Transforming from a frame id to itself can fail when the tf tree isn't
+  // being broadcast (e.g., for some bag files). We don't need to transform
+  // anything so might as well return identity and true.
+  if (target_frame == source_frame) {
+    target_frame_trans.setIdentity();
+    return true;
+  }
+
   tf2::TimePoint time_tf = tf2::timeFromSec(filter_utilities::toSec(time));
-  tf2::Duration duration_tf =
-    tf2::durationFromSec(filter_utilities::toSec(duration));
+  tf2::Duration duration_tf = tf2::durationFromSec(filter_utilities::toSec(duration));
+
+  std::string error_msg;
 
   // First try to transform the data at the requested time
-  try {
-    geometry_msgs::msg::TransformStamped stamped = buffer->lookupTransform(
-      target_frame, source_frame, time_tf, duration_tf);
-    tf2::fromMsg(stamped.transform, target_frame_trans);
-  } catch (tf2::TransformException & ex) {
-    // The issue might be that the transforms that are available are not close
-    // enough temporally to be used. In that case, just use the latest available
-    // transform and warn the user.
+  if (buffer->canTransform(target_frame, source_frame, time_tf, duration_tf, &error_msg)) {
+    try {
+      geometry_msgs::msg::TransformStamped stamped = buffer->lookupTransform(
+        target_frame, source_frame, time_tf, duration_tf);
+      tf2::fromMsg(stamped.transform, target_frame_trans);
+      return true;
+    } catch (tf2::TransformException & ex) {
+      // Try using the latest available transform instead, see further down.
+    }
+  }
+  
+  // The issue might be that the transforms that are available are not close
+  // enough temporally to be used. In that case, just use the latest available
+  // transform and warn the user.
+  if (buffer->canTransform(target_frame, source_frame, tf2::TimePointZero, duration_tf, &error_msg)) {
     try {
       tf2::fromMsg(
         buffer
@@ -162,36 +178,33 @@ bool lookupTransformSafe(
 
       if (!silent) {
         // ROS_WARN_STREAM_THROTTLE(2.0, "Transform from " << source_frame <<
-        // " to " << target_frame <<
-        //                              " was unavailable for the time
-        //                              requested. Using latest instead.\n");
+        // " to " << target_frame << " was unavailable for the time requested. Using latest instead.\n");
       }
+
+      return true;
     } catch (tf2::TransformException & ex) {
       if (!silent) {
         // ROS_WARN_STREAM_THROTTLE(2.0, "Could not obtain transform from " <<
-        // source_frame <<
-        //                              " to " << target_frame << ". Error was "
-        //                              << ex.what() << "\n");
+        // source_frame << " to " << target_frame << ". Error was " << ex.what() << "\n");
       }
-
-      retVal = false;
+    }
+  } else {
+    if (!silent) {
+      // ROS_WARN_STREAM_THROTTLE(2.0, "Could not obtain transform from " <<
+      // source_frame << " to " << target_frame << "\n");
     }
   }
 
-  // Transforming from a frame id to itself can fail when the tf tree isn't
-  // being broadcast (e.g., for some bag files). This is the only failure that
-  // would throw an exception, so check for this situation before giving up.
-  if (!retVal) {
-    if (target_frame == source_frame) {
-      target_frame_trans.setIdentity();
-      retVal = true;
-    }
+  if (!silent) {
+    auto & clk = *node->get_clock();
+    RCLCPP_WARN_STREAM_THROTTLE(node->get_logger(), clk, 3000, "Could not transform from " << source_frame << " to " << target_frame);
   }
 
-  return retVal;
+  return false;
 }
 
 bool lookupTransformSafe(
+  rclcpp::Node * node,
   const tf2_ros::Buffer * buffer,
   const std::string & target_frame,
   const std::string & source_frame,
@@ -200,7 +213,7 @@ bool lookupTransformSafe(
   const bool silent)
 {
   return lookupTransformSafe(
-    buffer, target_frame, source_frame, time,
+    node, buffer, target_frame, source_frame, time,
     rclcpp::Duration(0, 0u), target_frame_trans, silent);
 }
 

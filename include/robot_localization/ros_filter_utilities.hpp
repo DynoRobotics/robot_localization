@@ -81,6 +81,7 @@ double getYaw(const tf2::Quaternion quat);
 //! value of @p targetFrameTrans and returns true, otherwise it returns false.
 //!
 bool lookupTransformSafe(
+  rclcpp::Node * node,
   const tf2_ros::Buffer * buffer,
   const std::string & target_frame,
   const std::string & source_frame,
@@ -107,6 +108,7 @@ bool lookupTransformSafe(
 //! value of @p targetFrameTrans and returns true, otherwise it returns false.
 //!
 bool lookupTransformSafe(
+  rclcpp::Node * node,
   const tf2_ros::Buffer * buffer,
   const std::string & targetFrame,
   const std::string & sourceFrame,
